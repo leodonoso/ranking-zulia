@@ -20,7 +20,7 @@ options.add_argument('--headless')
 # Loading the page
 browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-browser.get('https://www.start.gg/tournament/panter-arena-2/event/ultimate-singles/standings')
+browser.get('https://www.start.gg/tournament/shine-2022/event/ultimate-singles/standings?page=1')
 
 delay = 10 # seconds
 
@@ -31,7 +31,12 @@ try:
     # Declare variables
     standings = [] # We fill this later with our data
     entrants = browser.find_element(By.CSS_SELECTOR, '.mui-1l4w6pd span.mui-x9rl7a-body1').get_attribute('innerHTML')
-    total_pages_float = int(entrants[-3:]) / 25
+    pages = []
+    for i in entrants.split():
+        if i.isdigit():
+            pages.append(int(i))
+
+    total_pages_float = pages[2] / 25
     total_pages = math.ceil(total_pages_float)
     
     for i in range(total_pages):
@@ -65,12 +70,8 @@ try:
         # Click the next page button
         browser.execute_script('arguments[0].click();', next_button)
 
+    print(standings) 
+    # It fucking works I'm so happy
+
 except TimeoutException:
     print ("Loading took too much time!")
-
-
-print(standings) 
-# It fucking works I'm so happy
-   
-
-    
