@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+from pymongo import MongoClient
 import math
 
 # Importing stuff to wait for the page to load the standings
@@ -11,6 +12,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
+
+MONGO_URI = 'mongodb+srv://pollo23:pollo23@cluster0.2odf0.mongodb.net/?retryWrites=true&w=majority'
+
+client = MongoClient(MONGO_URI)
+
+db = client['smash_zulia']
 
 # Options for the web browsing
 options = webdriver.ChromeOptions()
@@ -32,13 +39,21 @@ try:
     standings = [] # We fill this later with our data
     entrants = browser.find_element(By.CSS_SELECTOR, '.mui-1l4w6pd span.mui-x9rl7a-body1').get_attribute('innerHTML')
     pages = []
+    tournament_title = browser.find_element(By.CSS_SELECTOR, 'title').get_attribute('innerHTML')
+    
+    title_index = tournament_title.find('|')
+    title = tournament_title[0:title_index].strip().replace(' ', '_')
+
+    collection = db[f'{title}']
+
     for i in entrants.split():
         if i.isdigit():
             pages.append(int(i))
 
+    # Calculate amount of total pages
     total_pages_float = pages[2] / 25
     total_pages = math.ceil(total_pages_float)
-    
+
     for i in range(total_pages):
 
         # Wait for the page to load the Dynamic Data
@@ -70,8 +85,8 @@ try:
         # Click the next page button
         browser.execute_script('arguments[0].click();', next_button)
 
-    print(standings) 
-    # It fucking works I'm so happy
+    collection.insert_many(standings)
+    print(f'The following list was added to the {title} collection: {standings}')
 
 except TimeoutException:
     print ("Loading took too much time!")
