@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+import math
 
 # Importing stuff to wait for the page to load the standings
 from selenium import webdriver
@@ -14,7 +15,7 @@ from selenium.common.exceptions import TimeoutException
 # Options for the web browsing
 options = webdriver.ChromeOptions()
 options.add_argument('--incognito')
-# options.add_argument('--headless')
+options.add_argument('--headless')
 
 # Loading the page
 browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
@@ -27,42 +28,49 @@ try:
     # Wait for the page to load the Dynamic Data
     WebDriverWait(browser, delay).until(EC.presence_of_element_located((By.CLASS_NAME, 'tss-16pvhoc-gamerTag')))
 
-    # Parse data into HTML source code
-    HTMLcontent = browser.page_source
-
-    # Create soup to start scraping
-    soup = BeautifulSoup(HTMLcontent, 'lxml')
+    # Declare variables
+    standings = [] # We fill this later with our data
+    entrants = browser.find_element(By.CSS_SELECTOR, '.mui-1l4w6pd span.mui-x9rl7a-body1').get_attribute('innerHTML')
+    total_pages_float = int(entrants[-3:]) / 25
+    total_pages = math.ceil(total_pages_float)
     
-    # Create a list with all the placings
-    placings = soup.find_all('h3', class_='mui-thceyd-header20')
+    for i in range(total_pages):
 
-    # Create a list with all the gamertags
-    tags = soup.find_all('span', class_='tss-16pvhoc-gamerTag')
+        # Wait for the page to load the Dynamic Data
+        WebDriverWait(browser, delay).until(EC.presence_of_element_located((By.CLASS_NAME, 'tss-16pvhoc-gamerTag')))
 
-    # Initiate an empty list to later fill it with the standings
-    standings = []
+        # Parse data into HTML source code
+        HTMLcontent = browser.page_source
 
-    #Loop through the 'placings' and 'tags' lists and use the data to hydrate the 'standings' list
-    for place, tag in zip(placings, tags):
-        placing = place.text.strip()
-        gamertag_ = tag.text.strip().split()
-        gamertag = ' '.join(gamertag_)
+        # Create soup to start scraping
+        soup = BeautifulSoup(HTMLcontent, 'lxml')
+        
+        # Create a list with all the placings
+        placings = soup.find_all('h3', class_='mui-thceyd-header20')
 
-        standings.append({'placing': placing, 'gamertag': gamertag})
+        # Create a list with all the gamertags
+        tags = soup.find_all('span', class_='tss-16pvhoc-gamerTag')
 
-    print(standings)
-    # It fucking works I'm so happy
+        #Loop through the 'placings' and 'tags' lists and use the data to hydrate the 'standings' list
+        for place, tag in zip(placings, tags):
+            placing = place.text.strip()
+            gamertag_ = tag.text.strip().split()
+            gamertag = ' '.join(gamertag_)
+
+            standings.append({'placing': placing, 'gamertag': gamertag})
+
+        # Find the next page button
+        next_button = browser.find_element(By.CSS_SELECTOR, 'button[aria-label="Go to next page"]')
+
+        # Click the next page button
+        browser.execute_script('arguments[0].click();', next_button)
 
 except TimeoutException:
     print ("Loading took too much time!")
 
-# next_page = soup.find('button', { 'aria-label': "Go to next page" })
 
-# test = soup.find('tbody')
-# print(standings) 
-
-# html_text = requests.get('https://www.start.gg/tournament/panter-arena-2/event/ultimate-singles/standings')
-
+print(standings) 
+# It fucking works I'm so happy
    
 
     
