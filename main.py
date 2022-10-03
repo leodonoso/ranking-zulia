@@ -100,11 +100,13 @@ try:
         'standings': standings
     }
 
-    # Creating attendee list so I can search for notable players attending
+    # Fetch all the attendees and all the placings from the 'Standings' list
     attendees = []
+    list_of_placings = []
 
     for player in standings:
         attendees.append(player['gamertag'])
+        list_of_placings.append(player['placing'])
     
     # Calculating notable players from the tournament attendees
     top5 = []
@@ -137,7 +139,27 @@ try:
 
     score = len(attendees) + added_score_top5_players + added_score_top10_players + added_score_top15_players + added_score_top20_players
 
-    print(f'Tournament Score: {score}')
+    print(f'TOURNAMENT SCORE: {score}')
+
+    # ADD SCORE FIELD TO TOURNAMENT STANDINGS
+
+    # 1. Remove duplicates from list
+    list_of_unique_placings = [i for n, i in enumerate(list_of_placings) if i not in list_of_placings[:n]] 
+    amount_of_placings = len(list_of_unique_placings)
+    minimum_placing_score = round(score / amount_of_placings)
+
+    # 2. Calculate each placing's score
+    unique_placings_score = {}
+
+    for n, i in enumerate(list_of_unique_placings):
+        unique_placings_score.update({ i: score - minimum_placing_score * n })
+
+    # 3. Update standings with proper score
+    for i in standings:
+        sech = unique_placings_score.get(i['placing'])
+        i.update({'score': sech})
+
+    print(standings)
 
 except TimeoutException:
     print ("Loading took too much time!")

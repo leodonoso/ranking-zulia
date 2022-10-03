@@ -1,3 +1,6 @@
+from turtle import update
+
+
 class Player:
     def __init__(self, gamertag, rank, city):
         self.gamertag = gamertag
