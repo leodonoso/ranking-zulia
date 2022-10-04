@@ -18,7 +18,7 @@ MONGO_URI = 'mongodb+srv://pollo23:pollo23@cluster0.2odf0.mongodb.net/?retryWrit
 client = MongoClient(MONGO_URI)
 
 db = client['smash_zulia']
-
+collection = db['tournaments']
 
 # Options for the web browsing
 options = webdriver.ChromeOptions()
@@ -48,8 +48,6 @@ try:
     # Find tournament title
     title_index = tournament_title.find('|')
     title = tournament_title[0:title_index].strip().replace(' ', '_')
-
-    collection = db['tournaments']
 
     for i in entrants_html.split():
         if i.isdigit():
@@ -104,9 +102,6 @@ try:
         # Click the next page button
         browser.execute_script('arguments[0].click();', next_button)
 
-    # collection.insert_many(standings)
-    # print(f'The following list was added to the {title} collection: {standings}')
-
     # Fetch all the attendees and all the placings from the 'Standings' list
     attendees = []
     list_of_placings = []
@@ -142,7 +137,6 @@ try:
     score = len(attendees) + added_score_top5_players + added_score_top10_players + added_score_top15_players + added_score_top20_players
 
     # ADD SCORE FIELD TO TOURNAMENT STANDINGS
-
     # 1. Remove duplicates from list
     list_of_unique_placings = [i for n, i in enumerate(list_of_placings) if i not in list_of_placings[:n]] 
     amount_of_placings = len(list_of_unique_placings)
@@ -157,13 +151,72 @@ try:
     # 3. Update standings with proper score and notable wins
     for i in standings:
         sech = unique_placings_score.get(i['placing'])
-        i.update({'score': sech})
+        i.update({'placing_score': sech})
 
     # Adding upsets
     upsets.insert(0, '')
 
-    for n, i in enumerate(standings):
-        i.update({'lost_to': [upsets[n], upsets[n+1]]})
+    i = 0
+
+    for x in standings:
+        x.update({'losses': [upsets[i], upsets[i+1]]})
+        i+=2           
+    
+    # Calculate tournament wins, notable wins and wins_score
+    for z in attendees:
+        indexes = []
+        tournament_wins = []
+
+        for i in standings:
+            # Find the values for the 'losses' key in every dictionary item in the standings list
+            x = i.get('losses')
+
+            #  If any of those values matches the current player tag (z), then log the index of it's item so I can
+            # search it in the standings list later
+            
+            # If it matches twice, log the index twice
+            if x[0] == z and x[1] == z:
+                a = standings.index(i)
+                indexes.append(a)
+                indexes.append(a)
+
+            elif x[0] == z or x[1] == z:
+                a = standings.index(i)
+                indexes.append(a)
+
+        # Populate 'tournament_wins' list using the indexes we logged
+        for i in indexes:
+            tournament_wins.append(standings[i]['gamertag'])
+        
+        # Calculate notable wins
+        notable_wins = []
+        for i in tournament_wins:
+            for x in notable_players:
+                if i == x['tag']:
+                    if x['rank'] == 'Top 5':
+                        notable_wins.append({'gamertag': i, 'rank': x['rank'], 'score': 10})
+                    if x['rank'] == 'Top 10':
+                        notable_wins.append({'gamertag': i, 'rank': x['rank'], 'score': 6})
+                    if x['rank'] == 'Top 15':
+                        notable_wins.append({'gamertag': i, 'rank': x['rank'], 'score': 3})
+                    if x['rank'] == 'Top 20':
+                        notable_wins.append({'gamertag': i, 'rank': x['rank'], 'score': 2})
+
+        # Calculate total score
+        wins_score = 0
+        for i in notable_wins:
+            wins_score += i['score']
+
+        # Find index of player in standings list and update it's data
+        for i in standings:
+            if z == i['gamertag']:
+                i.update({'wins': tournament_wins})
+                i.update({'notable_wins': notable_wins})
+                i.update({'wins_score': wins_score})
+        
+        tournament_wins.clear
+        notable_wins.clear
+        wins_score = 0
 
     # Calculate tournament dictionary to send it to the database
     tournament = {
@@ -182,7 +235,8 @@ try:
         'standings': standings
     }
 
-    print(standings)
+    # collection.insert_one(tournament)
+    print(f'The {title} tournament was added to the Smash Zulia tournaments collection')
 
 except TimeoutException:
     print ("Loading took too much time!")
