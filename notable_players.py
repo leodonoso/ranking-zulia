@@ -14,16 +14,13 @@ class Player:
             'city': self.city
         }
 
-attendees = ['Pancakes', 'X-Pelox', 'Jerich', 'AndresAA', 'Tobio', 'Angelini', 'Zeliox SwordCloud', 'Spade', 'Hidan', 'Cismu', 
-'LuichoX', 'Hiro', 'Toxucroc', "Ale Hershey's", 'Jean Papitas', 'DIO', 'Flye', 'Anriot', 'Farre', 'Blate', 'Lum1', 
-'Konami', 'Diowo', 'Rookie355', 'Cax', 'Tino22', 'Danilopaz1', 'Valgarite', 'Difox', 'LIMIT', 'Agui', 'apselito', 'Tashi', 'Bassprototype14', 'luisipop', 'Odinlv', 'Sly!', 'Shark', 'Luigio', 'GyroZPP', 'Cachapa', 'Jackson']
-
 notable_players = [
     Player( 'Pancakes' , 'Top 5', 'Maracaibo').object(),
     Player( 'Angelini' , 'Top 5', 'Maracaibo').object(),
     Player('Tobio', 'Top 5', 'Maracaibo').object(),
     Player('Jerich', 'Top 5', 'Maracaibo').object(),
     Player('A-Crown', 'Top 5', 'Maracaibo').object(),
+    Player('AndresAA', 'Top 5', 'Maracaibo').object(),
     Player('Cismu', 'Top 10', 'Maracaibo').object(),
     Player('Karin Benzema', 'Top 10', 'Maracaibo').object(),
     Player('Zeliox SwordCloud', 'Top 10', 'Maracaibo').object(),
@@ -40,7 +37,7 @@ notable_players = [
     Player("Hidan", 'Top 20', 'Maracaibo').object(),
     Player("DIO", 'Top 20', 'Maracaibo').object(),
     Player('Tashi', 'Top 5', 'Ojeda').object(),
-    Player('Pelox', 'Top 5', 'Ojeda').object(),
+    Player('X-Pelox', 'Top 5', 'Ojeda').object(),
     Player('Hiro', 'Top 5', 'Cabimas').object(),
     Player('Janrok', 'Top 5', 'Ojeda').object(),
     Player('Trokermon', 'Top 5', 'Cabimas').object(),

@@ -11,6 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from notable_players import notable_players
+import re
 
 MONGO_URI = 'mongodb+srv://pollo23:pollo23@cluster0.2odf0.mongodb.net/?retryWrites=true&w=majority'
 
@@ -41,6 +42,8 @@ try:
     entrants_html = browser.find_element(By.CSS_SELECTOR, '.mui-1l4w6pd span.mui-x9rl7a-body1').get_attribute('innerHTML')
     pages = []
     tournament_title = browser.find_element(By.CSS_SELECTOR, 'title').get_attribute('innerHTML')
+    tournament_date = browser.find_element(By.CSS_SELECTOR, 'div.sgg1f4az span.mui-1623fqp-body1').get_attribute('innerHTML')
+    tournament_location = browser.find_element(By.CSS_SELECTOR, 'div.location-sgg8uCc9 span').get_attribute('innerHTML')
 
     # Find tournament title
     title_index = tournament_title.find('|')
@@ -56,6 +59,9 @@ try:
     entrants = pages[2]
     total_pages_float = entrants / 25
     total_pages = math.ceil(total_pages_float)
+
+    # Upsets list to calculate notable wins
+    upsets = []
 
     # Calculate standings
     for i in range(total_pages):
@@ -75,13 +81,22 @@ try:
         # Create a list with all the gamertags
         tags = soup.find_all('span', class_='tss-16pvhoc-gamerTag')
 
-        #Loop through the 'placings' and 'tags' lists and use the data to hydrate the 'standings' list
+        # Create a list with all the players in the 'Lost To:' column
+        lost_to = soup.find_all(href=re.compile('entrant'), attrs={'class': "MuiTypography-root MuiTypography-inherit MuiLink-root MuiLink-underlineHover primary-sggda-XD root-sggMrwNO mui-9idtjk"})
+
+        # Loop through the 'placings' and 'tags' lists and use the data to hydrate the 'standings' list
         for place, tag in zip(placings, tags):
             placing = place.text.strip()
             gamertag_ = tag.text.strip().split()
             gamertag = ' '.join(gamertag_)
 
             standings.append({'placing': placing, 'gamertag': gamertag})
+
+        # Get upsets
+        for loss in lost_to:
+            loss_txt = loss.get_text()
+            loss_index = loss_txt.find('|')
+            upsets.append(loss_txt[loss_index+1:len(loss_txt)+1].strip())
 
         # Find the next page button
         next_button = browser.find_element(By.CSS_SELECTOR, 'button[aria-label="Go to next page"]')
@@ -91,14 +106,6 @@ try:
 
     # collection.insert_many(standings)
     # print(f'The following list was added to the {title} collection: {standings}')
-
-    # Calculate tournament dictionary to send it to the database
-    tournament = {
-        'name': title,
-        # 'date': date,
-        'entrants': entrants,
-        'standings': standings
-    }
 
     # Fetch all the attendees and all the placings from the 'Standings' list
     attendees = []
@@ -126,20 +133,13 @@ try:
                 elif i['rank'] == 'Top 20':
                     top20.append(x)
 
-    print('NOTABLE PLAYERS')
-    print(f'Top 5 ({len(top5)} players): {top5}')
-    print(f'Top 10 ({len(top10)} players): {top10}')
-    print(f'Top 15 ({len(top15)} players): {top15}')
-    print(f'Top 20 ({len(top20)} players): {top20}')
-
     added_score_top5_players = len(top5) * 7
-    added_score_top10_players = len(top5) * 5    
-    added_score_top15_players = len(top5) * 3    
-    added_score_top20_players = len(top5)   
+    added_score_top10_players = len(top10) * 5    
+    added_score_top15_players = len(top15) * 3    
+    added_score_top20_players = len(top20)   
+    notable_attendees = top5 + top10 + top15 + top20
 
     score = len(attendees) + added_score_top5_players + added_score_top10_players + added_score_top15_players + added_score_top20_players
-
-    print(f'TOURNAMENT SCORE: {score}')
 
     # ADD SCORE FIELD TO TOURNAMENT STANDINGS
 
@@ -154,10 +154,33 @@ try:
     for n, i in enumerate(list_of_unique_placings):
         unique_placings_score.update({ i: score - minimum_placing_score * n })
 
-    # 3. Update standings with proper score
+    # 3. Update standings with proper score and notable wins
     for i in standings:
         sech = unique_placings_score.get(i['placing'])
         i.update({'score': sech})
+
+    # Adding upsets
+    upsets.insert(0, '')
+
+    for n, i in enumerate(standings):
+        i.update({'lost_to': [upsets[n], upsets[n+1]]})
+
+    # Calculate tournament dictionary to send it to the database
+    tournament = {
+        'name': title,
+        'date': tournament_date.strip(),
+        'location': tournament_location.strip(),
+        'entrants': entrants,
+        'notable_players': {
+            'total': len(notable_attendees),
+            'top 5': top5,
+            'top 10': top10,
+            'top 15': top15,
+            'top 20': top20
+        },
+        'score': score,
+        'standings': standings
+    }
 
     print(standings)
 
