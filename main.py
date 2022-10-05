@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
 import math
+from xpath_soup import xpath_soup
 
 # We use Selenium to load Dynamic HTMl
 from selenium import webdriver
@@ -23,7 +24,7 @@ collection = db['tournaments']
 # Options for the web browsing
 options = webdriver.ChromeOptions()
 options.add_argument('--incognito')
-options.add_argument('--headless')
+# options.add_argument('--headless')
 
 # Loading the page
 browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
@@ -67,7 +68,7 @@ try:
         # Wait for the page to load the Dynamic Data
         WebDriverWait(browser, delay).until(EC.presence_of_element_located((By.CLASS_NAME, 'tss-16pvhoc-gamerTag')))
 
-        # Parse data into HTML source code
+        # Parse webdriver into HTML source code
         HTMLcontent = browser.page_source
 
         # Create soup to start scraping
@@ -120,13 +121,17 @@ try:
         for x in attendees:
             if i['tag'] == x:
                 if i['rank'] == 'Top 5':
-                    top5.append(x)
+                    z = {'tag': x, 'rank': 'Top 5'}
+                    top5.append(z)
                 elif i['rank'] == 'Top 10':
-                    top10.append(x)
+                    z = {'tag': x, 'rank': 'Top 10'}
+                    top10.append(z)
                 elif i['rank'] == 'Top 15':
-                    top15.append(x)
+                    z = {'tag': x, 'rank': 'Top 15'}
+                    top15.append(z)
                 elif i['rank'] == 'Top 20':
-                    top20.append(x)
+                    z = {'tag': x, 'rank': 'Top 20'}
+                    top20.append(z)
 
     added_score_top5_players = len(top5) * 7
     added_score_top10_players = len(top10) * 5    
@@ -191,7 +196,7 @@ try:
         # Calculate notable wins
         notable_wins = []
         for i in tournament_wins:
-            for x in notable_players:
+            for x in notable_attendees:
                 if i == x['tag']:
                     if x['rank'] == 'Top 5':
                         notable_wins.append({'gamertag': i, 'rank': x['rank'], 'score': 10})
@@ -214,9 +219,58 @@ try:
                 i.update({'notable_wins': notable_wins})
                 i.update({'wins_score': wins_score})
         
+        # Clear data for next attendee
         tournament_wins.clear
         notable_wins.clear
         wins_score = 0
+
+    # Check for DQd players and remove them from the notable_attendees list
+    dq_players_el = []
+    tags_indexes = []
+    dq_players = []
+
+    for i in range(total_pages):
+        # Parse webdriver into HTML source code and create soup
+        HTMLcontent = browser.page_source
+        soup = BeautifulSoup(HTMLcontent, 'lxml')
+
+        # Find 'gamertags' span elements and a 'tr' for later
+        tr = soup.find('tr', class_="mui-1c8m30i")
+        
+        # 1. Find span element in the page for the notable players
+        for i in notable_players:
+            for x in tags:
+                if i['tag'] == x.string:
+                    tags_indexes.append(tags.index(x)) # Log all the elements's indexes in a list
+
+        # 2. Use the indexes to populate 'tags' list with the span elements for all the notable players
+        for i in tags_indexes:
+            dq_players.append(tags[i])
+
+        # 3. Find the tr parent element of each span element, click it, and check if the player was DQd
+        for i in dq_players_el:
+            for x in i.parents:
+                if x.name == tr.name: # If the parent is a 'tr' element...
+                    # Log the xpath of the parent element so we can click it using selenium
+                    xpath = xpath_soup(x)
+                    xtr = browser.find_element(By.XPATH, xpath)
+                    browser.execute_script('arguments[0].click();', xtr)
+                    dq_element = WebDriverWait(browser, delay).until(EC.presence_of_element_located((By.CLASS_NAME, 'scoreContainer-sggQ92-p')))
+                    
+                    dq_string = dq_element.get_attribute('innerHTML')
+                    if "DQ" in dq_string:
+                        print('atus')
+                        dq_players.append(i.string)
+                    
+                    go_back_el = browser.find_element(By.CSS_SELECTOR, 'div[tabindex="-1"]')
+                    browser.execute_script('arguments[0].click();', go_back_el)
+
+        # Find the previous page button
+        prev_button = browser.find_element(By.CSS_SELECTOR, 'button[aria-label="Go to previous page"]')
+        print(dq_players)
+        # Click the next page button
+        browser.execute_script('arguments[0].click();', prev_button)
+        
 
     # Calculate tournament dictionary to send it to the database
     tournament = {
@@ -226,17 +280,15 @@ try:
         'entrants': entrants,
         'notable_players': {
             'total': len(notable_attendees),
-            'top 5': top5,
-            'top 10': top10,
-            'top 15': top15,
-            'top 20': top20
+            'players': notable_attendees,
         },
         'score': score,
         'standings': standings
     }
 
     # collection.insert_one(tournament)
-    print(f'The {title} tournament was added to the Smash Zulia tournaments collection')
+    # print(f'The {title} tournament was added to the Smash Zulia tournaments collection')
+    # print(tournament)
 
 except TimeoutException:
     print ("Loading took too much time!")
