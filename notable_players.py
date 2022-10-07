@@ -34,6 +34,7 @@ notable_players = [
     Player("Hidan", 'Top 20', 'Maracaibo').object(),
     Player("DIO", 'Top 20', 'Maracaibo').object(),
     Player('Tashi', 'Top 5', 'Ojeda').object(),
+    Player('LA CREATURA', 'Top 5', 'Ojeda').object(),
     Player('X-Pelox', 'Top 5', 'Ojeda').object(),
     Player('Hiro', 'Top 5', 'Cabimas').object(),
     Player('Janrok', 'Top 5', 'Ojeda').object(),
