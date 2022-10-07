@@ -10,6 +10,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import TimeoutException
 from notable_players import notable_players
 import re
@@ -230,11 +231,17 @@ try:
     dq_players = []
 
     for i in range(total_pages):
+        # Wait for the page to load the Dynamic Data
+        WebDriverWait(browser, delay).until(EC.presence_of_element_located((By.CLASS_NAME, 'tss-16pvhoc-gamerTag')))
+
         # Parse webdriver into HTML source code and create soup
         HTMLcontent = browser.page_source
         soup = BeautifulSoup(HTMLcontent, 'lxml')
 
-        # Find 'gamertags' span elements and a 'tr' for later
+        # Create a list with all the gamertags
+        tags = soup.find_all('span', class_='tss-16pvhoc-gamerTag')
+
+        # Find 'tr' for later
         tr = soup.find('tr', class_="mui-1c8m30i")
         
         # 1. Find span element in the page for the notable players
@@ -245,7 +252,7 @@ try:
 
         # 2. Use the indexes to populate 'tags' list with the span elements for all the notable players
         for i in tags_indexes:
-            dq_players.append(tags[i])
+            dq_players_el.append(tags[i])
 
         # 3. Find the tr parent element of each span element, click it, and check if the player was DQd
         for i in dq_players_el:
@@ -254,6 +261,8 @@ try:
                     # Log the xpath of the parent element so we can click it using selenium
                     xpath = xpath_soup(x)
                     xtr = browser.find_element(By.XPATH, xpath)
+
+                    # Click the tr to check for DQs
                     browser.execute_script('arguments[0].click();', xtr)
                     dq_element = WebDriverWait(browser, delay).until(EC.presence_of_element_located((By.CLASS_NAME, 'scoreContainer-sggQ92-p')))
                     
@@ -261,14 +270,18 @@ try:
                     if "DQ" in dq_string:
                         print('atus')
                         dq_players.append(i.string)
-                    
-                    go_back_el = browser.find_element(By.CSS_SELECTOR, 'div[tabindex="-1"]')
-                    browser.execute_script('arguments[0].click();', go_back_el)
+                    # Go back to standings
+                    go_back_el = WebDriverWait(browser, delay).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div[tabindex="-1"]')))
+
+                    go_back_el.send_keys(Keys.ESCAPE)
+
+                    WebDriverWait(browser, 2)
+
 
         # Find the previous page button
         prev_button = browser.find_element(By.CSS_SELECTOR, 'button[aria-label="Go to previous page"]')
         print(dq_players)
-        # Click the next page button
+        # Click the previous page button
         browser.execute_script('arguments[0].click();', prev_button)
         
 
