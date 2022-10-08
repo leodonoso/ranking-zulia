@@ -81,3 +81,45 @@ db.tournaments.aggregate(
         }
     ]
 ).pretty()
+
+// Find all results by two different players
+db.tournaments.aggregate(
+    [
+        {
+            $unwind: '$standings'
+        },
+        {
+            $project: {
+                tag: '$standings.gamertag', 
+                placing: '$standings.placing', 
+                tournament: '$name', 
+                placing_score: '$standings.placing_score', 
+                wins_score: '$standings.wins_score' 
+            }
+        },
+        {
+            $match: {
+                tag: {'$in': ['Karin Benzema', 'Revolver Cunaguaro']}
+            }        
+        },
+        // {
+        //     $set: {
+        //         tag: 'Tashi'
+        //     }
+        // },
+        // {
+        //     $group: {
+        //         _id: '$tag',
+        //         total_wins_score: {'$sum': { $sum: ['$wins_score']}},
+        //         tournament_attendance: {'$sum': 1},
+        //         results: {'$push': {
+        //                 placing: '$placing', 
+        //                 tournament: '$tournament', 
+        //                 placing_score: '$placing_score', 
+        //                 wins_score: '$wins_score'
+        //             }
+        //         }
+        //     }
+        // }
+    ]
+).pretty()

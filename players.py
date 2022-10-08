@@ -13,10 +13,10 @@ MONGODB_URI = os.environ["MONGO_URI"]
 # Connect to your MongoDB cluster:
 client = pymongo.MongoClient(MONGODB_URI)
 
-# Get a reference to the "sample_mflix" database:
+# Get a reference to the "smash_zulia" database:
 db = client["smash_zulia"]
 
-# Get a reference to the "movies" collection:
+# Get a reference to the "tournaments" collection:
 tournament_collection = db["tournaments"]
 
 # --- Define pipeline stages ---
@@ -33,19 +33,19 @@ stage_project_results = {
 }
 
 stage_group_results_by_gamertag = {
-            '$group': {
-                '_id': '$tag',
-                'total_wins_score': {'$sum': { '$sum': '$wins_score'}},
-                'tournament_attendance': {'$sum': 1},
-                'results': {'$push': {
-                        'placing': '$placing', 
-                        'tournament': '$tournament', 
-                        'placing_score': '$placing_score', 
-                        'wins_score': '$wins_score'
-                    }
-                }
+    '$group': {
+        '_id': '$tag',
+        'total_wins_score': {'$sum': { '$sum': '$wins_score'}},
+        'tournament_attendance': {'$sum': 1},
+        'results': {'$push': {
+                'placing': '$placing', 
+                'tournament': '$tournament', 
+                'placing_score': '$placing_score', 
+                'wins_score': '$wins_score'
             }
         }
+    }
+}
 
 stage_sort_by_attendance = {
     '$sort': {
@@ -151,8 +151,17 @@ for player in players:
         total_score = round((player['total_placing_score'] / 3) + player['total_wins_score'], 2)
         player.update({'total_score': total_score})
 
+# --- Sort players by highest total score ---
+def sort_by_highest_total_score(e):
+    return e['total_score']
+
+players.sort(reverse=True, key=sort_by_highest_total_score)
+
 # Create table
 header = players[0].keys()
 rows = [x.values() for x in players]
 
 print(tabulate.tabulate(rows, header))
+
+# players_collection = db['players']
+# players_collection.insert_many(players)
