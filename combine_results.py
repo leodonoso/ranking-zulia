@@ -5,6 +5,7 @@ import tabulate
 import bson
 from dotenv import load_dotenv
 import pymongo
+from repeated_players import repeated_players
 
 # Load config from a .env file:
 load_dotenv(verbose=True)
@@ -56,11 +57,10 @@ pipeline1 = [
 results_pointer = tournament_collection.aggregate(pipeline1)
 
 # --- Find results from two players ---
-atucu = [['Tashi', 'LA CREATURA'], ['Karin Benzema', 'Revolver Cunaguaro'], ['anoel doble a', 'Jovani Vasquez']]
 
 players = []
 
-for names in atucu:
+for names in repeated_players:
     pipeline2 = [
         {
             '$match': {
@@ -92,7 +92,7 @@ for names in atucu:
 # --- Total Placing Score ---
 
 placings = []
-for names in atucu:
+for names in repeated_players:
     pipeline2 = [
         {
             '$match': {
@@ -105,7 +105,7 @@ for names in atucu:
             }        
         },
         {
-            '$limit': 5
+            '$limit': 7
         },  
         {
             '$set': {
@@ -149,9 +149,35 @@ for player in players:
 header = players[0].keys()
 rows = [x.values() for x in players]
 
-# --- Delete repeated players from database ---
-# for names in atucu:
-#     db['players'].delete_many({ 'tag': {'$in': names}})
+print(tabulate.tabulate(rows, header))
 
-players_collection = db['players']
-players_collection.insert_many(players)
+# --- Delete repeated players from database ---
+# players_collection = db['players']
+
+# for names in repeated_players:
+#     players_collection.delete_many({ 'tag': {'$in': names}})
+
+# --- Adding 'city' ---
+# players_collection.update_many({}, {'$set': {'city':'Maracaibo'}}, upsert=False, array_filters=None)
+
+# pipeline5 = [
+#     {
+#         '$match': {
+#             'name': {'$in': ['SUCOL Stadium', 'SUCOL Stadium #2']}
+#         }
+#     },
+#     stage_unwind_standings,
+#     stage_project_results,
+#     {
+#     '$group': {
+#             '_id': '$tag',
+#         }
+#     }
+# ]
+
+# city_pointer = tournament_collection.aggregate(pipeline5)
+
+# for city in city_pointer:
+    # players_collection.update_one({'tag': city['_id']}, {'$set': {'city':'Cabimas'}})
+
+# players_collection.insert_many(players)

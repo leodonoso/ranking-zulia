@@ -15,6 +15,9 @@ from notable_players import notable_players
 from dotenv import load_dotenv
 import os
 import re
+import tabulate
+from bson.objectid import ObjectId
+
 
 load_dotenv()
 MONGO_URI = os.getenv('MONGO_URI')
@@ -32,7 +35,7 @@ options.add_argument('--headless')
 # Loading the page
 browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-tournament_url = 'https://www.start.gg/tournament/neo-lucina-s-coliseum-5/event/super-smash-bros-ultimate-singles/standings'
+tournament_url = 'https://www.start.gg/tournament/neo-lucina-s-coliseum-7/event/super-smash-bros-ultimate-singles-1/standings'
 browser.get(tournament_url)
 
 delay = 10 # seconds
@@ -299,11 +302,32 @@ try:
         notable_wins.clear
         wins_score = 0
 
+    # --- Get player IDs for standings ---
+    for name in attendees:
+        for x in standings:
+            awiri = x.get('gamertag')
+            
+            if awiri == name:
+                sech = db['players'].count_documents({'alt_tags': name})
+
+                if sech >= 1:
+                    sucutu = db['players'].find({'alt_tags': name})
+                    for sucu in sucutu:
+                        x.update({'player_id': sucu['_id']})
+                else:
+                    x.update({'player_id': ObjectId()})
+
+    # --- Get tournament city ---
+    if 'Cabimas' in tournament_location:
+        city = 'Cabimas'
+    else:
+        city = 'Maracaibo'
+
     # --- Calculate tournament dictionary to send it to the database ---
     tournament = {
         'name': title,
         'date': tournament_date.strip(),
-        'location': tournament_location.strip(),
+        'city': city,
         'entrants': len(attendees),
         'notable_players': {
             'total': len(notable_attendees),
@@ -312,9 +336,15 @@ try:
         'score': score,
         'standings': standings
     }
-
+    
+    # TO DO = Insert standings list into the results database.
     collection.insert_one(tournament)
     print(f'The {title} tournament was added to the Smash Zulia tournaments collection')
+
+    # header = standings[0].keys()
+    # rows = [x.values() for x in standings]
+
+    # print(tabulate.tabulate(rows, header))
 
 except TimeoutException:
     print ("Loading took too much time!")
