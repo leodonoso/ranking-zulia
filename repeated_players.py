@@ -1,0 +1,25 @@
+repeated_players = [
+    ['Tashi', 'LA CREATURA'], 
+    ['Karin Benzema', 'Revolver Cunaguaro'], 
+    ['anoel doble a', 'Jovani Vasquez'],
+    ['A-Crown', 'AndresAA'],
+    ['Ale_Hersheys', "Ale Hershey's"],
+    [ "Moon's Scion", 'MizukiV', 'La Cabrona'],
+    ['Rookie', 'Rookie355'],
+    ['Kyros', 'Kitara V'],
+    ['LIMIT', 'José23', 'Jose23'],
+    ['TINO', 'Tino22'],
+    ['Danilo', 'Danilopaz1'],
+    ['Zack Orfila', 'Zackyzacky', 'Terry Crazy'],
+    ['Cax', 'cax'],
+    ['Blate', 'El Cappy'],
+    ['Dam', 'DamferKing'],
+    ['Lum1', 'Lumin0th'],
+    ['Difox', 'DIFOX'],
+    ['Luisipop', 'luisipop'],
+    ['Bassprototype', 'Bassprototype14'],
+    ['Agui', 'NQH'],
+    ['GyroZPP', 'Gyrozpp7'],
+    ['OdinLv', 'Odinlv']
+]
+
