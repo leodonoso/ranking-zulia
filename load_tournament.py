@@ -1,4 +1,5 @@
 # Libraries imported: Beautiful Soup, Selenium Webdriver, pymongo, math, re, dotenv, os, xpath_soup function, notable_players list.
+from datetime import datetime
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
 import math
@@ -30,15 +31,15 @@ collection = db['tournaments']
 # Options for the web browsing
 options = webdriver.ChromeOptions()
 options.add_argument('--incognito')
-options.add_argument('--headless')
+# options.add_argument('--headless')
 
 # Loading the page
 browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-tournament_url = 'https://www.start.gg/tournament/neo-lucina-s-coliseum-7/event/super-smash-bros-ultimate-singles-1/standings'
+tournament_url = 'https://www.start.gg/tournament/neo-lucina-s-coliseum-10/event/super-smash-bros-ultimate-singles/standings'
 browser.get(tournament_url)
 
-delay = 10 # seconds
+delay = 15 # seconds
 
 try:
     # Wait for the page to load the Dynamic Data
@@ -164,19 +165,9 @@ try:
 
         # Find 'tr' for later
         tr = soup.find('tr', class_="mui-1c8m30i")
-        
-        # 1. Find span element in the page for the notable players
-        for i in notable_players:
-            for x in tags:
-                if i['tag'] == x.string:
-                    tags_indexes.append(tags.index(x)) # Log all the elements's indexes in a list
-
-        # 2. Use the indexes to populate 'tags' list with the span elements for all the notable players
-        for i in tags_indexes:
-            dq_players_el.append(tags[i])
 
         # 3. Find the tr parent element of each span element, click it, and check if the player was DQd
-        for i in dq_players_el:
+        for i in tags:
             for x in i.parents:
                 if x.name == tr.name: # If the parent is a 'tr' element...
                     # Log the xpath of the parent element so we can click it using selenium
@@ -302,49 +293,147 @@ try:
         notable_wins.clear
         wins_score = 0
 
-    # --- Get player IDs for standings ---
-    for name in attendees:
-        for x in standings:
-            awiri = x.get('gamertag')
-            
-            if awiri == name:
-                sech = db['players'].count_documents({'alt_tags': name})
+    new_player_ids = []
 
-                if sech >= 1:
-                    sucutu = db['players'].find({'alt_tags': name})
-                    for sucu in sucutu:
-                        x.update({'player_id': sucu['_id']})
-                else:
-                    x.update({'player_id': ObjectId()})
+    # --- Get player IDs for standings ---
+    for x in standings:
+        awiri = x.get('gamertag')
+        sech = db['players'].count_documents({'alt_tags': awiri})
+
+        if sech >= 1:
+            sucutu = db['players'].find({'alt_tags': awiri})
+            for sucu in sucutu:
+                x.update({'player_id': sucu['_id']})
+        else:
+            x.update({'player_id': ObjectId()})
+
+            new_player_ids.append({
+                '_id': x['player_id'],
+                'tag': awiri,
+                'alt_tags': [awiri],
+                'city': None
+            })
+
+    for x in standings:
+        abliquitus = x.get('losses')
+        ibitanga = x.get('wins')
+        bosocamber = x.get('notable_wins')
+
+        # Get player IDs in the losses array
+        for n, i in enumerate(abliquitus):
+            sech = db['players'].count_documents({'alt_tags': i})
+
+            if sech >= 1:
+                sucutu = db['players'].find({'alt_tags': i})
+                for sucu in sucutu:
+                    abliquitus[n] = sucu['_id']
+
+        # Get player IDs in the wins and notable wins array
+        for n, i in enumerate(ibitanga):
+            sech = db['players'].count_documents({'alt_tags': i})
+
+            if sech >= 1:
+                sucutu = db['players'].find({'alt_tags': i})
+                for sucu in sucutu:
+                    ibitanga[n] = sucu['_id']
+            else:
+                for npi in new_player_ids:
+                    if i == npi['tag']:
+                        ibitanga[n] = npi['_id']
+        
+        for n, i in enumerate(bosocamber):
+            sech = db['players'].count_documents({'alt_tags': i['gamertag']})
+
+            if sech >= 1:
+                sucutu = db['players'].find({'alt_tags': i['gamertag']})
+                for sucu in sucutu:
+                    i.update({'player_id': sucu['_id']})
+            else:
+                for npi in new_player_ids:
+                    if i['gamertag'] == npi['tag']:
+                        i.update({'player_id': npi['_id']})    
 
     # --- Get tournament city ---
     if 'Cabimas' in tournament_location:
-        city = 'Cabimas'
+        city = ObjectId('635848341c20664c84d148f6')
     else:
-        city = 'Maracaibo'
+        city = ObjectId('6358480d1c20664c84d148f5')
+
+    # --- Get tournament date ---
+    tourneydate = tournament_date.strip()
+    
+    suki = tourneydate.split(' ')
+
+    num = ''
+
+    for sech in suki[1]:
+        if sech.isdigit():
+            num = num + sech
+
+    suki[1] = num
+
+    awatus = ' '.join(suki)
+
+    date = datetime.strptime(awatus, '%b %d %Y')
+
+    tournament_id = ObjectId()
 
     # --- Calculate tournament dictionary to send it to the database ---
     tournament = {
+        '_id': tournament_id,
         'name': title,
-        'date': tournament_date.strip(),
+        'date': date,
         'city': city,
         'entrants': len(attendees),
         'notable_players': {
             'total': len(notable_attendees),
             'players': notable_attendees,
         },
-        'score': score,
-        'standings': standings
+        'score': score
     }
-    
-    # TO DO = Insert standings list into the results database.
+
+    # --- Create Results and Matches list to send to the database.
+    results  = []
+    matches = []
+
+    for x in standings:
+        results.append({
+            'tournament_id': tournament_id,
+            'player_id': x['player_id'],
+            'placing': x['placing'],
+            'placing_score': x['placing_score'],
+            'notable_wins': len(x['notable_wins']),
+            'wins_score': x['wins_score']
+        })
+
+        for w in x['wins']:
+            matches.append({
+                'tournament_id': tournament_id,
+                'winner_id': x['player_id'],
+                'loser_id': w,
+                'upset_score': 0
+            })
+        
+        for nw in x['notable_wins']:
+            for m in matches:
+                if nw['player_id'] == m['loser_id']:
+                    m.update({'upset_score': nw['score']})
+
     collection.insert_one(tournament)
+
     print(f'The {title} tournament was added to the Smash Zulia tournaments collection')
+    
+    db['results'].insert_many(results)
 
-    # header = standings[0].keys()
-    # rows = [x.values() for x in standings]
+    print('Added new results')
 
-    # print(tabulate.tabulate(rows, header))
+    db['matches'].insert_many(matches)
+
+    print('Added new matches')
+
+    if len(new_player_ids) > 1:
+        db['players'].insert_many(new_player_ids)
+        print('Added new players')
 
 except TimeoutException:
     print ("Loading took too much time!")

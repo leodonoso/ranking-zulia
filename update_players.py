@@ -24,25 +24,31 @@ results_collection = db["results"]
 # Get a reference to the  "players" collection:
 player_collection = db["players"]
 
-pipeline = [
-    {
-        '$match': {}
-    },
-    {
-        '$lookup': {
+# Get a reference to the  "tournaments" collection:
+tournament_collection = db["tournaments"]
+
+# Get a reference to the  "cities" collection:
+cities_collection = db["cities"]
+
+# Define Pipeline Stages
+
+stage_lookup_player = {
+    '$lookup': {
             'from': 'players',
             'localField': 'player_id',
             'foreignField': '_id',
             'as': 'results'
         }
-    },
-    {
+}
+
+stage_unwind_results = {
         '$unwind': '$results'
-    },
-    {
+    }
+
+stage_group_results_by_player = {
         '$group': {
             '_id': '$player_id',
-            'tag': {'$first': '$tag'},
+            'tag': {'$first': '$results.tag'},
             'total_wins_score': {'$sum': { '$sum': '$wins_score'}},
             'tournament_attendance': {'$sum': 1},
             'city': {'$first': '$results.city'},
@@ -50,30 +56,43 @@ pipeline = [
                     '$push': {
                     'tournament_id': '$tournament_id',
                     'placing': '$placing',
-                    'tournament': '$tournament',
-                    'tournament_city': '$city', 
                     'placing_score': '$placing_score',
                     'notable_wins': '$notable_wins', 
                     'wins_score': '$wins_score'
                 }
             }
         }
-    },
+    }
+
+update_pipeline = [
+    stage_lookup_player,
+    stage_unwind_results,
+    stage_group_results_by_player,
 ]
 
-updated_player_pointer = results_collection.aggregate(pipeline)
+updated_player_pointer = results_collection.aggregate(update_pipeline)
 
 dummy_list = []
 
-
 for player in updated_player_pointer:
+    # Get player city's document TEMPORAL
+    city_document = cities_collection.find_one({'_id': player['city']})
+
     # Get all the results from every player
     results = player['results']
+
+    if city_document == None:
+        tourney_for_city = tournament_collection.find_one({'_id': results[0]['tournament_id']})
+        player.update({'city': tourney_for_city['city']})
 
     # Find tournaments traveled to
     tournaments_traveled = 0
     for result in results:
-        if player['city'] != result['tournament_city']:
+        result_tournament_id = result['tournament_id']
+
+        result_tournament = tournament_collection.find_one({'_id': result_tournament_id})
+
+        if player['city'] != result_tournament['city']:
             tournaments_traveled += 1
 
     # Find total placing score
@@ -110,9 +129,17 @@ for player in updated_player_pointer:
 
     total_score = player['total_wins_score'] + placing_score_ratio + bonus_points
 
+    player.update({
+        'total_placing_score': total_placing_score,
+        'tournaments_traveled_to': tournaments_traveled,
+        'total_score': total_score
+    })
+
+    # Update players collection
     player_collection.update_one({'_id': player['_id']}, { "$set": { 
         'tournament_attendance': player['tournament_attendance'],
         'total_wins_score': player['total_wins_score'],
+        'city': player['city'],
         'total_placing_score': total_placing_score,
         'tournaments_traveled_to': tournaments_traveled,
         'total_score': total_score

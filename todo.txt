@@ -1,0 +1,56 @@
+* To do list *
+1.- Tabla de results sin multivalores.
+
+Esquema: {
+ 
+}
+
+2.- Tabla de temporadas.
+
+Esquema: {
+ _id:
+ name:
+ start_date:
+ end_date:
+}
+
+3.- Tabla de ciudades.
+
+Esquema: {
+ _id:
+ ciudad: 
+}
+
+4.- Tabla de jugadores notables many-to-many.
+
+Esquema: {
+ player_id:
+ season_id:
+ rank: ''
+}
+
+5.- Tabla de upsets many-to-many.
+
+Esquema: {
+ player_upsetted_id:
+ player_upsetteer_id:
+ 
+}
+
+6.- Leer sobre las reglas de normalizacion.
+
+7.- Tabla de personajes y skins.
+
+Esquema: {
+ _id: 123
+ personaje: 'Mario',
+ juego: Ultimate,
+}
+
+
+tabla de alts, esquema: {
+ _id: 
+ character_id:
+ alt_url:
+ alt_name: vanilla.
+}

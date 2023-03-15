@@ -54,4 +54,7 @@ notable_players = [
     Player('Queen', 'Top 20', 'Cabimas').object(),
     Player('Jacky', 'Top 20', 'Cabimas').object(),
     Player('Satoru', 'Top 20', 'Cabimas').object(),
+    Player('Garu', 'Top 5', 'Caracas').object(),
+    Player('Cami', 'Top 10', 'Caracas').object(),
+    Player('CartezSoul', 'Top 5', 'Barquisimeto').object(),
 ]
